@@ -7,9 +7,9 @@ const download = require('download-git-repo');
 const figlet = require('figlet');
 const minimist = require('minimist');
 
-const files = require('./lib/files');
-const github = require('./lib/github');
-const repo = require('./lib/repo');
+const files = require('./src/files');
+const github = require('./src/github');
+const repo = require('./src/repo');
 
 class DesignerCli {
 
@@ -34,23 +34,45 @@ class DesignerCli {
 		const commands = argv._;
 		if (commands.length) {
 			const command = commands[0];
-			const value = commands.length === 2 ? commands[1] : '';
 			switch (commands[0]) {
 				case 'new':
-					await this.createApp(value);
+					await this.createApp(commands[1]);
 					break;
 			}
 		} else {
 			new clui.Line()
-				.padding(2)
-				.column(chalk.green('command'), 20)
-				.column(chalk.green('description'), 20)
+				.padding(1)
+				.column(chalk.green('command'), 12)
+				.column(chalk.green('param'), 16)
+				.column(chalk.green('description'), 40)
 				.fill()
 				.output();
 			new clui.Line()
-				.padding(2)
-				.column(chalk.cyan('new'), 20)
-				.column(chalk.white('create a new app'), 20)
+				.padding(1)
+				.column(chalk.cyan('new'), 12)
+				.column(chalk.cyan('<appName?>'), 16)
+				.column(chalk.white('create a new app'), 40)
+				.fill()
+				.output();
+			new clui.Line()
+				.padding(1)
+				.column(chalk.cyan('serve'), 12)
+				.column(chalk.cyan('<target?>'), 16)
+				.column(chalk.white('run a development server on target'), 40)
+				.fill()
+				.output();
+			new clui.Line()
+				.padding(1)
+				.column(chalk.cyan('build'), 12)
+				.column(chalk.cyan('<target?>'), 16)
+				.column(chalk.white('build browser and server for target'), 40)
+				.fill()
+				.output();
+			new clui.Line()
+				.padding(1)
+				.column(chalk.cyan('pubver'), 12)
+				.column(chalk.cyan('<pathToLib?>'), 16)
+				.column(chalk.white('publish a new version to npm'), 40)
 				.fill()
 				.output();
 		}
@@ -66,8 +88,9 @@ class DesignerCli {
 		*/
 	}
 
-	async createApp(value) {
-		console.log(chalk.red('new'), '=>', chalk.cyan(value), '\n');
+	async createApp(appName) {
+		appName = appName || 'designr-cli';
+		console.log(chalk.red('new'), '=>', chalk.cyan(appName), '\n');
 		const status = new clui.Spinner(chalk.cyan('loading...'));
 		status.start();
 		await new Promise((resolve, reject) => {
@@ -75,11 +98,11 @@ class DesignerCli {
 				setTimeout(() => {
 					status.stop();
 					if (error) {
-						console.log(chalk.cyan(value), '=>', chalk.red('error'), '\n');
+						console.log(chalk.cyan(appName), '=>', chalk.red('error'), '\n');
 						reject(error);
 					} else {
-						console.log(chalk.cyan(value), '=>', chalk.green('success'), '\n');
-						resolve(value);
+						console.log(chalk.cyan(appName), '=>', chalk.green('success'), '\n');
+						resolve(appName);
 					}
 					return;
 				}, 200);
