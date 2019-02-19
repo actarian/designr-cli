@@ -1,0 +1,32 @@
+{
+	"name": "@designr/cli",
+	"version": "0.0.1",
+	"description": "CLI for Designr lib",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"Designr",
+		"CLI"
+	],
+	"author": "Luca Zampetti <lzampetti@gmail.com>",
+	"license": "MIT",
+	"bin": {
+		"designr": "./index.js"
+	},
+	"dependencies": {
+		"@octokit/rest": "^14.0.5",
+		"chalk": "^2.3.0",
+		"clear": "0.0.1",
+		"clui": "^0.3.6",
+		"configstore": "^3.1.1",
+		"download-git-repo": "^1.1.0",
+		"figlet": "^1.2.0",
+		"inquirer": "^5.0.1",
+		"lodash": "^4.17.4",
+		"minimist": "^1.2.0",
+		"simple-git": "^1.89.0",
+		"touch": "^3.1.0"
+	}
+}
