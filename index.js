@@ -3,15 +3,26 @@
 const clear = require('clear');
 const chalk = require('chalk');
 const clui = require('clui');
-const download = require('download-git-repo');
+const downloadGitRepo = require('download-git-repo');
 const figlet = require('figlet');
 const minimist = require('minimist');
+const path = require('path');
 
 const files = require('./src/files');
 const github = require('./src/github');
 const repo = require('./src/repo');
 
+const pathToGit = 'actarian/designr-client';
+
 class DesignerCli {
+
+	/*
+	command     param           description
+	create      <appName?>      create a new app
+	serve       <target?>       run a development server on target
+	build       <target?>       build browser and server for target
+	pubver      <pathToLib?>    publish a new version to npm
+	*/
 
 	constructor() {
 		clear();
@@ -29,15 +40,33 @@ class DesignerCli {
 		this.parseCommand();
 	}
 
-	async parseCommand() {
+	parseCommand() {
 		const argv = minimist(process.argv.slice(2));
 		const commands = argv._;
 		if (commands.length) {
 			const command = commands[0];
+			let promise;
 			switch (commands[0]) {
-				case 'new':
-					await this.createApp(commands[1]);
+				case 'create':
+					promise = this.create(commands[1]);
 					break;
+				case 'serve':
+					promise = this.serve(commands[1]);
+					break;
+				case 'build':
+					promise = this.build(commands[1]);
+					break;
+				case 'pubver':
+					promise = this.pubver(commands[1]);
+					break;
+			}
+			if (promise) {
+				promise.then(success => {
+					console.log(chalk.cyan('designr-cli'), '=>', chalk.green('success'));
+				}, error => {
+					console.log(chalk.red('error'), '=>', chalk.yellow(error));
+					process.exit();
+				});
 			}
 		} else {
 			new clui.Line()
@@ -49,7 +78,7 @@ class DesignerCli {
 				.output();
 			new clui.Line()
 				.padding(1)
-				.column(chalk.cyan('new'), 12)
+				.column(chalk.cyan('create'), 12)
 				.column(chalk.cyan('<appName?>'), 16)
 				.column(chalk.white('create a new app'), 40)
 				.fill()
@@ -77,37 +106,74 @@ class DesignerCli {
 				.output();
 		}
 		console.log('');
-		/*
-		if (files.directoryExists('.git')) {
-			console.log(chalk.red('Already a git repository!'));
-			process.exit();
-		} else {
-			console.log(chalk.red('done!', argv._));
-			// this.run();
-		}
-		*/
 	}
 
-	async createApp(appName) {
-		appName = appName || 'designr-cli';
-		console.log(chalk.red('new'), '=>', chalk.cyan(appName), '\n');
-		const status = new clui.Spinner(chalk.cyan('loading...'));
-		status.start();
-		await new Promise((resolve, reject) => {
-			download('actarian/designr-client', 'temp', (error) => {
-				setTimeout(() => {
-					status.stop();
-					if (error) {
-						console.log(chalk.cyan(appName), '=>', chalk.red('error'), '\n');
-						reject(error);
-					} else {
-						console.log(chalk.cyan(appName), '=>', chalk.green('success'), '\n');
-						resolve(appName);
-					}
-					return;
-				}, 200);
+	serve_(appName, targetPath) {
+		return new Promise((resolve, reject) => {
+			files.changeCwd(targetPath);
+			files.serve(targetPath).then((success) => {
+				console.log(chalk.cyan(appName), '=>', chalk.green('serve'), '\n');
+				resolve(appName);
+			}, (error) => {
+				reject(error);
 			});
 		});
+	}
+
+	install_(appName, targetPath) {
+		return new Promise((resolve, reject) => {
+			console.log(chalk.cyan('installing...\n'));
+			files.npmInstall(targetPath).then((success) => {
+				resolve(appName);
+			}, (error) => {
+				reject(error);
+			});
+		});
+	}
+
+	download_(appName, targetPath) {
+		return new Promise((resolve, reject) => {
+			const status = new clui.Spinner(chalk.cyan('loading...'));
+			status.start();
+			downloadGitRepo(pathToGit, targetPath, (error) => {
+				if (error) {
+					status.stop();
+					reject(error);
+				} else {
+					status.stop();
+					resolve(appName);
+				}
+			});
+		});
+	}
+
+	create(appName) {
+		appName = appName || 'designr-cli';
+		console.log(chalk.red('new'), '=>', chalk.cyan(appName), '\n');
+		const targetPath = path.join(process.cwd(), appName, 'Client');
+		if (files.directoryExists(targetPath)) {
+			console.log(chalk.red(`directory exist at path`), '=>', chalk.cyan(`${appName}/Client\n`));
+			process.exit();
+		} else {
+			return files.serial([
+				() => this.download_(appName, targetPath),
+				() => this.install_(appName, targetPath),
+				() => this.serve_(appName, targetPath)
+			]);
+		}
+	}
+
+	serve(target) {
+		console.log(chalk.red('serve'), '=>', chalk.cyan(target || 'default'));
+		files.serve();
+	}
+
+	build(target) {
+		console.log('build', target);
+	}
+
+	pubver(pathToLib) {
+		console.log('pubver', pathToLib);
 	}
 
 	async getGithubToken() {
