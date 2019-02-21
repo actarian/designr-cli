@@ -185,6 +185,18 @@ function changeCwd(path) {
 	}
 }
 
+function exists(src) {
+	return new Promise((resolve, reject) => {
+		fs.exists(src, (exists) => {
+			if (exists) {
+				resolve(src);
+			} else {
+				reject(false);
+			}
+		});
+	});
+}
+
 module.exports = {
 	getCurrentDirectoryBase,
 	directoryExists,
@@ -201,4 +213,5 @@ module.exports = {
 	writeFileJson,
 	existsOrCreateFolder,
 	serial,
+	exists,
 };

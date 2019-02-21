@@ -10,6 +10,7 @@ const path = require('path');
 const files = require('./files');
 const command = require('./command');
 const pubver = require('./pubver');
+const debug = require('./debug');
 const github = require('./github');
 const repo = require('./repo');
 
@@ -232,8 +233,13 @@ class DesignerCli {
 
 	debug(target) {
 		target = target || 'development';
-		console.log(chalk.red('debug'), '=>', chalk.cyan(target), '\n');
-		process.exit();
+		console.log(chalk.red('debug'), '=>', chalk.cyan(target));
+		return debug.run(target).then((result) => {
+			process.exit();
+		}, error => {
+			console.log(chalk.red(`${error}\n`));
+			process.exit();
+		});
 	}
 
 	async pubver(version) {
