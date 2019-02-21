@@ -106,6 +106,14 @@ function build(target) {
 	});
 }
 
+function pubver(target) {
+	return child(`npm run build:${target}`).then(success => {
+
+	}, error => {
+		console.log('');
+	});
+}
+
 function npmInstall(folder) {
 	return child(`npm install`); // --prefix "${folder}"
 }
@@ -119,4 +127,5 @@ module.exports = {
 	npmPublish,
 	serve,
 	build,
+	pubver,
 };

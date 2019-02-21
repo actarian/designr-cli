@@ -1,17 +1,17 @@
 const fs = require('fs');
 const path = require('path');
 
-function isDirectory(path) {
-	return fs.lstatSync(path).isDirectory();
+function isDirectory(src) {
+	return fs.lstatSync(src).isDirectory();
 }
 
-function getDirectories(path) {
-	return fs.readdirSync(path).map(name => path.join(path, name)).filter(isDirectory);
+function getDirectories(src) {
+	return fs.readdirSync(src).map(name => path.join(src, name)).filter(isDirectory);
 }
 
-function isDirectoryEmpty(path) {
+function isDirectoryEmpty(src) {
 	return new Promise((resolve, reject) => {
-		fs.readdir(path, (error, files) => {
+		fs.readdir(src, (error, files) => {
 			if (error) {
 				reject(error);
 			} else if (files.length === 0) {
@@ -23,9 +23,9 @@ function isDirectoryEmpty(path) {
 	});
 }
 
-function readFiles(path) {
+function readFiles(src) {
 	return new Promise((resolve, reject) => {
-		fs.readdir(path, (error, files) => {
+		fs.readdir(src, (error, files) => {
 			if (error) {
 				reject(error);
 			} else {
@@ -64,25 +64,17 @@ function copyFolder(src, dest) {
 function copyFile(src, dest) {
 	return new Promise((resolve, reject) => {
 		const folder = path.dirname(dest);
-		existsOrCreateFolder(folder)
-			.then(
-				folder => {
-					fs.copyFile(
-						src,
-						dest,
-						(error) => {
-							if (error) {
-								reject(error);
-							} else {
-								resolve(dest);
-							}
-						}
-					);
-				},
-				error => {
+		existsOrCreateFolder(folder).then(folder => {
+			fs.copyFile(src, dest, (error) => {
+				if (error) {
 					reject(error);
+				} else {
+					resolve(dest);
 				}
-			);
+			});
+		}, error => {
+			reject(error);
+		});
 	});
 }
 
@@ -113,50 +105,34 @@ function readFileJson(src) {
 function writeFile(content, dest) {
 	return new Promise((resolve, reject) => {
 		const folder = path.dirname(dest);
-		existsOrCreateFolder(folder)
-			.then(
-				folder => {
-					fs.writeFile(
-						dest,
-						content,
-						'utf8',
-						error => {
-							if (error) {
-								reject(error);
-							} else {
-								resolve(dest);
-							}
-						});
-				},
-				error => {
+		existsOrCreateFolder(folder).then(folder => {
+			fs.writeFile(dest, content, 'utf8', error => {
+				if (error) {
 					reject(error);
+				} else {
+					resolve(dest);
 				}
-			);
+			});
+		}, error => {
+			reject(error);
+		});
 	});
 }
 
 function writeFileJson(data, dest) {
 	return new Promise((resolve, reject) => {
 		const folder = path.dirname(dest);
-		existsOrCreateFolder(folder)
-			.then(
-				folder => {
-					fs.writeFile(
-						dest,
-						JSON.stringify(data, null, 2),
-						'utf8',
-						error => {
-							if (error) {
-								reject(error);
-							} else {
-								resolve(dest);
-							}
-						});
-				},
-				error => {
+		existsOrCreateFolder(folder).then(folder => {
+			fs.writeFile(dest, JSON.stringify(data, null, 2), 'utf8', error => {
+				if (error) {
 					reject(error);
+				} else {
+					resolve(dest);
 				}
-			);
+			});
+		}, error => {
+			reject(error);
+		});
 	});
 }
 

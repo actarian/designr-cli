@@ -3,11 +3,13 @@ const chalk = require('chalk');
 const clui = require('clui');
 const downloadGitRepo = require('download-git-repo');
 const figlet = require('figlet');
+const inquirer = require('inquirer');
 const minimist = require('minimist');
 const path = require('path');
 
 const files = require('./files');
 const command = require('./command');
+const pubver = require('./pubver');
 const github = require('./github');
 const repo = require('./repo');
 
@@ -21,7 +23,7 @@ class DesignerCli {
 	serve       <target?>       run a development server on target
 	build       <target?>       build browser and server for target
 	debug       <target?>       debug server for target
-	pubver      <pathToLib?>    publish a new version to npm
+	pubver      <version?>    publish a new version to npm
 	*/
 
 	/*
@@ -97,44 +99,44 @@ class DesignerCli {
 		} else {
 			new clui.Line()
 				.padding(1)
-				.column(chalk.green('command'), 12)
-				.column(chalk.green('param'), 16)
-				.column(chalk.green('description'), 40)
+				.column(chalk.red('command'), 12)
+				.column(chalk.red('param'), 16)
+				.column(chalk.red('description'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('create'), 12)
 				.column(chalk.cyan('<appName?>'), 16)
-				.column(chalk.white('create a new app'), 40)
+				.column(chalk.green('create a new app'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('serve'), 12)
 				.column(chalk.cyan('<target?>'), 16)
-				.column(chalk.white('run a development server on target'), 40)
+				.column(chalk.green('run a development server on target'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('build'), 12)
 				.column(chalk.cyan('<target?>'), 16)
-				.column(chalk.white('build browser and server for target'), 40)
+				.column(chalk.green('build browser and server for target'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('debug'), 12)
 				.column(chalk.cyan('<target?>'), 16)
-				.column(chalk.white('debug server for target'), 40)
+				.column(chalk.green('debug server for target'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('pubver'), 12)
-				.column(chalk.cyan('<pathToLib?>'), 16)
-				.column(chalk.white('publish a new version to npm'), 40)
+				.column(chalk.cyan('<version?>'), 16)
+				.column(chalk.green('publish a new version to npm'), 40)
 				.fill()
 				.output();
 		}
@@ -234,9 +236,25 @@ class DesignerCli {
 		process.exit();
 	}
 
-	pubver(pathToLib) {
-		console.log('pubver', pathToLib);
-		process.exit();
+	async pubver(version) {
+		return pubver.getNextConfig(version).then(async (config) => {
+			console.log(chalk.red('pubver'), '=>', chalk.cyan(config.version), '\n');
+			const questions = [{
+				name: 'publish',
+				type: 'confirm',
+				message: `Want to publish version ${config.version}`
+			}];
+			const result = await inquirer.prompt(questions);
+			if (result.publish) {
+				pubver.publish(config.version);
+			} else {
+				console.log('');
+				process.exit();
+			}
+		}, error => {
+			console.log(chalk.red(`${error}\n`));
+			process.exit();
+		});
 	}
 
 	version() {
@@ -245,7 +263,7 @@ class DesignerCli {
 			console.log(chalk.cyan('@designr/cli'), info.version, '\n');
 		}, error => {
 			console.log(chalk.red(error), '\n');
-		})
+		});
 	}
 
 	/*
