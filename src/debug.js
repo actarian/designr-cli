@@ -10,65 +10,69 @@ const files = require('./files');
 function run(target) {
 	return new Promise((resolve, reject) => {
 		target = target || 'development';
-		const mainRelativePath = path.join('dist', target, 'server', 'main.js')
-		const mainPath = path.join(process.cwd(), mainRelativePath);
+		const mainPath = path.join(process.cwd(), 'dist', target, 'server', 'main.js');
 		files.exists(mainPath).then(exist => {
 			// run(target);
-			const main = require(mainRelativePath);
-			console.log(main);
-			resolve(mainPath);
+			const main = require(mainPath);
+			// console.log(main);
+			render(main.default, 'https://development.labs.it/').then(result => {
+				resolve(result);
+			}, error => {
+				reject(error);
+			});
 		}, error => {
 			reject(`file /dist/${target}/server/main.js not found`);
 		});
 	});
 }
 
-function run_(callback, baseUrl) {
-	console.warn('\nserver main.js => [execution]');
-	try {
-		if (callback && baseUrl) {
-			const params = ['/', {}, baseUrl, '/', { originalHtml: `
-			<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
-				<meta charset="utf-8">
-				<title>Viaggi Eurospin: Un Mondo di Vantaggi</title>
-				<base href="/">
-				<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes">
-				<link rel="icon" type="image/x-icon" href="favicon.ico">
-				<link rel="manifest" href="manifest.json">
-				<meta name="theme-color" content="#1976d2">
-			</head>
-
-			<body>
-				<app-component></app-component>
-				<noscript>Questa applicazione richiede l'utilizzo di javascript.</noscript>
-			</body>
-
-			</html>` }];
+function render(callback, baseUrl) {
+	return new Promise((resolve, reject) => {
+		try {
+			const params = [];
 			// console.log(params);
 			// console.log(process.env);
+			/*
 			let slug = Object.keys(process.env)
 				.find(x => x.indexOf('npm_config_slug') === 0);
 			slug = slug ? slug.split('npm_config_slug_')[1] : '/';
 			// console.log(slug);
 			params[3] = slug;
-			params.unshift((error, result) => {
+			*/
+			callback((error, result) => {
 				if (error) {
-					console.warn('\n/dist/server/main.js => [error]');
-					console.log(error);
-					console.log(result || '');
+					reject(error);
 				} else {
-					console.warn('\n/dist/server/main.js => [result]');
-					console.log(result);
+					resolve(result);
 				}
+			}, '/', {}, baseUrl, '/', {
+				originalHtml: `<!doctype html>
+			<html lang="en">
+
+			<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
+				<meta charset="utf-8">
+				<title>Website Title</title>
+				<base href="/">
+				<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes">
+				<link rel="icon" type="image/x-icon" href="favicon.ico">
+				<!-- <link rel="manifest" href="manifest.json"> -->
+				<meta name="theme-color" content="#1976d2">
+			</head>
+
+			<body>
+				<app-component></app-component>
+				<noscript>This application requires JavaScript.</noscript>
+			</body>
+
+			</html>`
 			});
-			callback.apply(this, params);
+
+		} catch (error) {
+			reject(error);
 		}
-	} catch (error) {
-		console.warn('\n/dist/server/main.js => [error]');
-		console.log(error);
-	}
+	});
 };
 
 module.exports = {
 	run,
-}
+};

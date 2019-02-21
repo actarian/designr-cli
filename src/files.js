@@ -197,6 +197,22 @@ function exists(src) {
 	});
 }
 
+function replace(src, textOrRegexp, replacementText) {
+	return new Promise((resolve, reject) => {
+		fs.readFile(src, 'utf8', function(error, data) {
+			if (error) {
+				reject(error);
+			}
+			const result = data.replace(textOrRegexp, replacementText);
+			fs.writeFile(src, result, 'utf8', function(error) {
+				if (error) {
+					reject(error);
+				}
+			});
+		});
+	});
+}
+
 module.exports = {
 	getCurrentDirectoryBase,
 	directoryExists,
@@ -214,4 +230,5 @@ module.exports = {
 	existsOrCreateFolder,
 	serial,
 	exists,
+	replace,
 };

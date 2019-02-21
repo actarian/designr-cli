@@ -3,7 +3,7 @@ const chalk = require('chalk');
 const clui = require('clui');
 const Configstore = require('configstore');
 const _ = require('lodash');
-const inquirer = require('./inquirer');
+const inquirer = require('./_inquirer');
 const info = require('../package.json');
 
 const conf = new Configstore(info.name);

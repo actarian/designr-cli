@@ -1,21 +1,25 @@
 const clear = require('clear');
 const chalk = require('chalk');
 const clui = require('clui');
+const compareVersions = require('compare-versions');
 const downloadGitRepo = require('download-git-repo');
 const figlet = require('figlet');
 const inquirer = require('inquirer');
 const minimist = require('minimist');
 const path = require('path');
-
+//
 const files = require('./files');
 const command = require('./command');
 const pubver = require('./pubver');
 const debug = require('./debug');
-const github = require('./github');
-const repo = require('./repo');
-
-const pathToGit = 'actarian/designr-client';
-
+const github = require('./_github');
+const repo = require('./_repo');
+//
+const GIT_PATH_DEFAULT = 'actarian/designr-client';
+const NODE_VERSION = '10.0.0';
+const NPM_VERSION = '5.8.0';
+const NG_VERSION = '7.0.0';
+//
 class DesignerCli {
 
 	/*
@@ -24,26 +28,7 @@ class DesignerCli {
 	serve       <target?>       run a development server on target
 	build       <target?>       build browser and server for target
 	debug       <target?>       debug server for target
-	pubver      <version?>    publish a new version to npm
-	*/
-
-	/*
-	"build:browser:development": "ng build browser --configuration=development",
-	"build:browser:staging": "ng build browser --configuration=staging",
-	"build:browser:production": "ng build browser --configuration=production",
-	"build:server:development": "ng build server --configuration=development && npm run dependency:development:fix",
-	"build:server:staging": "ng build server --configuration=staging && npm run dependency:staging:fix",
-	"build:server:production": "ng build server --configuration=production && npm run dependency:production:fix",
-	"build:development": "npm run build:browser:development & npm run build:server:development",
-	"build:staging": "npm run build:browser:staging & npm run build:server:staging",
-	"build:production": "npm run build:browser:production & npm run build:server:production",
-	"build:docs": "ng build browser --configuration=docs",
-	"dependency:development:fix": "node -e \"require('./utils/replace.js')('./dist/development/server/main.js', new RegExp('angular-in.memory-web-api(.[^\\\"]*)', 'gm'), 'angular-in-memory-web-api')\"",
-	"dependency:staging:fix": "node -e \"require('./utils/replace.js')('./dist/staging/server/main.js', new RegExp('angular-in.memory-web-api(.[^\\\"]*)', 'gm'), 'angular-in-memory-web-api')\"",
-	"dependency:production:fix": "node -e \"require('./utils/replace.js')('./dist/production/server/main.js', new RegExp('angular-in.memory-web-api(.[^\\\"]*)', 'gm'), 'angular-in-memory-web-api')\"",
-	"debug:development": "node -e \"require('./utils/debug.js')(require('./dist/development/server/main.js').default, 'https://development.labs.it/')\"",
-	"debug:staging": "node -e \"require('./utils/debug.js')(require('./dist/staging/server/main.js').default, 'http://staging.site.it/')\"",
-	"debug:production": "node -e \"require('./utils/debug.js')(require('./dist/production/server/main.js').default, 'https://www.site.it/')\""
+	pubver      <version?>      publish a new version to npm
 	*/
 
 	constructor() {
@@ -66,37 +51,42 @@ class DesignerCli {
 		const argv = minimist(process.argv.slice(2));
 		const commands = argv._;
 		if (commands.length) {
-			const command = commands[0];
-			let promise;
-			switch (commands[0]) {
-				case 'create':
-					promise = this.create(commands[1]);
-					break;
-				case 'serve':
-					promise = this.serve(commands[1]);
-					break;
-				case 'build':
-					promise = this.build(commands[1]);
-					break;
-				case 'debug':
-					promise = this.debug(commands[1]);
-					break;
-				case 'pubver':
-					promise = this.pubver(commands[1]);
-					break;
-				case 'v':
-				case 'version':
-					promise = this.version(commands[1]);
-					break;
-			}
-			if (promise) {
-				promise.then(success => {
-					console.log(chalk.cyan('designr-cli'), '=>', chalk.green('success'));
-				}, error => {
-					console.log(chalk.red('error'), '=>', chalk.yellow(error));
-					process.exit();
-				});
-			}
+			this.checkVersions_().then(success => {
+				const command = commands[0];
+				let promise;
+				switch (commands[0]) {
+					case 'create':
+						promise = this.create(commands[1]);
+						break;
+					case 'serve':
+						promise = this.serve(commands[1]);
+						break;
+					case 'build':
+						promise = this.build(commands[1]);
+						break;
+					case 'debug':
+						promise = this.debug(commands[1]);
+						break;
+					case 'pubver':
+						promise = this.pubver(commands[1]);
+						break;
+					case 'v':
+					case 'version':
+						promise = this.version(commands[1]);
+						break;
+				}
+				if (promise) {
+					promise.then(success => {
+						console.log(chalk.cyan('designr-cli:'), chalk.green('success'));
+					}, error => {
+						console.log(chalk.red('error:'), chalk.yellow(error));
+						process.exit();
+					});
+				}
+			}, error => {
+				console.log(chalk.red('error:'), chalk.yellow(error));
+				process.exit();
+			});
 		} else {
 			new clui.Line()
 				.padding(1)
@@ -144,15 +134,43 @@ class DesignerCli {
 		console.log('');
 	}
 
-	dest_(appName) {
+	checkVersions_() {
+		return new Promise((resolve, reject) => {
+			files.serial([
+				// () => command.nodeVersion(),
+				() => command.npmVersion(),
+				// () => command.ngVersion(),
+			]).then(versions => {
+				// console.log(versions);
+				/*
+				if (compareVersions(versions[0], NODE_VERSION) === -1) {
+					return reject(`node required version >= ${NODE_VERSION}`);
+				}
+				*/
+				if (compareVersions(versions[0], NPM_VERSION) === -1) {
+					return reject(`npm required version >= ${NPM_VERSION}`);
+				}
+				/*
+				if (compareVersions(versions[1], NG_VERSION) === -1) {
+					return reject(`ng required version >= ${NG_VERSION}`);
+				}
+				*/
+				resolve(versions);
+			}, error => {
+				reject(error);
+			});
+		});
+	}
+
+	getAppFolder_(appName) {
 		return process.cwd(); // path.join(process.cwd(), appName, 'Client');
 	}
 
-	serve_(appName, dest) {
+	serve_(appName, appFolder) {
 		return new Promise((resolve, reject) => {
-			files.changeCwd(dest);
-			command.serve(dest).then((success) => {
-				console.log(chalk.cyan(appName), '=>', chalk.green('serve'), '\n');
+			files.changeCwd(appFolder);
+			command.serve(appFolder).then((success) => {
+				console.log(chalk.cyan(`${appName}:`), chalk.green('serve'));
 				resolve(appName);
 			}, (error) => {
 				reject(error);
@@ -160,10 +178,10 @@ class DesignerCli {
 		});
 	}
 
-	install_(appName, dest) {
+	install_(appName, appFolder) {
 		return new Promise((resolve, reject) => {
-			console.log(chalk.cyan('installing...\n'));
-			command.npmInstall(dest).then((success) => {
+			console.log(chalk.cyan('installing...'));
+			command.npmInstall(appFolder).then((success) => {
 				resolve(appName);
 			}, (error) => {
 				reject(error);
@@ -171,11 +189,23 @@ class DesignerCli {
 		});
 	}
 
-	download_(appName, dest) {
+	async download_(appName, appFolder) {
+		const questions = [{
+			type: 'list',
+			name: 'projectType',
+			message: 'Choose project type:',
+			choices: ['Default'],
+			default: 'Default'
+		}];
+		const results = await inquirer.prompt(questions);
+		let path = GIT_PATH_DEFAULT;
+		if (results.projectType === 'Default') {
+			path = GIT_PATH_DEFAULT;
+		}
 		return new Promise((resolve, reject) => {
 			const status = new clui.Spinner(chalk.cyan('loading...'));
 			status.start();
-			downloadGitRepo(pathToGit, dest, (error) => {
+			downloadGitRepo(path, appFolder, (error) => {
 				if (error) {
 					status.stop();
 					reject(error);
@@ -187,33 +217,45 @@ class DesignerCli {
 		});
 	}
 
+	async selectTarget_() {
+		const questions = [{
+			type: 'list',
+			name: 'target',
+			message: 'Choose target:',
+			choices: ['development', 'stage', 'production'],
+			default: 'development'
+		}];
+		const results = await inquirer.prompt(questions);
+		return results.target;
+	}
+
 	create(appName) {
 		appName = appName || 'designr-cli';
-		console.log(chalk.red('create'), '=>', chalk.cyan(appName));
-		const dest = this.dest_(appName);
-		files.isDirectoryEmpty(dest).then(empty => {
+		console.log(chalk.red('create:'), chalk.cyan(appName));
+		const appFolder = this.getAppFolder_(appName);
+		files.isDirectoryEmpty(appFolder).then(empty => {
 			return files.serial([
-				() => this.download_(appName, '.'),
-				() => this.install_(appName, '.'),
-				() => this.serve_(appName, '.')
+				async () => await this.download_(appName, '.'),
+					() => this.install_(appName, '.'),
+					() => this.serve_(appName, '.')
 			]);
 		}, error => {
 			if (Array.isArray(error)) {
-				console.log(chalk.red(`directory is not empty`), '=>', chalk.cyan(`${dest}\n`));
+				console.log(chalk.red(`directory is not empty:`), chalk.cyan(`${appFolder}`));
 			} else {
-				console.log(chalk.red(`${error}\n`));
+				console.log(chalk.red(`${error}`));
 			}
 			process.exit();
 		});
 		/*
-		if (files.directoryExists(dest)) {
-			console.log(chalk.red(`directory exist at path`), '=>', chalk.cyan(`${appName}/Client\n`));
+		if (files.directoryExists(appFolder)) {
+			console.log(chalk.red(`directory exist at path:`), chalk.cyan(`${appName}/Client`));
 			process.exit();
 		} else {
 			return files.serial([
-				() => this.download_(appName, dest),
-				() => this.install_(appName, dest),
-				() => this.serve_(appName, dest)
+				() => this.download_(appName, appFolder),
+				() => this.install_(appName, appFolder),
+				() => this.serve_(appName, appFolder)
 			]);
 		}
 		*/
@@ -221,30 +263,30 @@ class DesignerCli {
 
 	serve(target) {
 		target = target || 'development';
-		console.log(chalk.red('serve'), '=>', chalk.cyan(target), '\n');
-		command.serve(target);
+		console.log(chalk.red('serve:'), chalk.cyan(target));
+		return command.serve(target);
 	}
 
-	build(target) {
-		target = target || 'development';
-		console.log(chalk.red('build'), '=>', chalk.cyan(target), '\n');
-		command.build(target);
+	async build(target) {
+		target = target || await this.selectTarget_();
+		console.log(chalk.red('build:'), chalk.cyan(target));
+		return command.build(target);
 	}
 
-	debug(target) {
-		target = target || 'development';
-		console.log(chalk.red('debug'), '=>', chalk.cyan(target));
+	async debug(target) {
+		target = target || await this.selectTarget_();
+		console.log(chalk.red('debug:'), chalk.cyan(target));
 		return debug.run(target).then((result) => {
 			process.exit();
 		}, error => {
-			console.log(chalk.red(`${error}\n`));
+			console.log(chalk.red(`${error}`));
 			process.exit();
 		});
 	}
 
 	async pubver(version) {
 		return pubver.getNextConfig(version).then(async (config) => {
-			console.log(chalk.red('pubver'), '=>', chalk.cyan(config.version), '\n');
+			console.log(chalk.red('pubver:'), chalk.cyan(config.version));
 			const questions = [{
 				name: 'publish',
 				type: 'confirm',
@@ -258,7 +300,7 @@ class DesignerCli {
 				process.exit();
 			}
 		}, error => {
-			console.log(chalk.red(`${error}\n`));
+			console.log(chalk.red(`error:`), chalk.yellow(`${error}`));
 			process.exit();
 		});
 	}
@@ -266,9 +308,9 @@ class DesignerCli {
 	version() {
 		const infoPath = path.join(__dirname, '..', 'package.json');
 		files.readFileJson(infoPath).then(info => {
-			console.log(chalk.cyan('@designr/cli'), info.version, '\n');
+			console.log(chalk.cyan('@designr/cli'), info.version);
 		}, error => {
-			console.log(chalk.red(error), '\n');
+			console.log(chalk.red(error));
 		});
 	}
 

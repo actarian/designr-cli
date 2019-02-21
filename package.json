@@ -3,6 +3,9 @@
 	"version": "0.0.1",
 	"description": "CLI for Designr lib",
 	"main": "index.js",
+	"engines": {
+		"node": ">=10.0.0"
+	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
@@ -20,6 +23,7 @@
 		"chalk": "^2.3.0",
 		"clear": "0.0.1",
 		"clui": "^0.3.6",
+		"compare-versions": "~3.4.0",
 		"configstore": "^3.1.1",
 		"download-git-repo": "^1.1.0",
 		"figlet": "^1.2.0",

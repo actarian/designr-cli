@@ -1,6 +1,7 @@
 const path = require('path');
 const spawn = require('spawn-command-with-kill');
 const childProcess = require('child_process');
+const files = require('./files');
 
 function npmInstall__(folder) {
 	return new Promise((resolve, reject) => {
@@ -31,14 +32,20 @@ function npmInstall__(folder) {
 	});
 }
 
-function child(command) {
+function child(command, silent) {
 	return new Promise((resolve, reject) => {
 		const args = command.split(' ');
 		const name = args.shift();
 		const child = childProcess.spawn(name, args, {
-			stdio: 'inherit',
+			stdio: silent ? 'pipe' : 'inherit',
 			// stdio: [process.stdin, process.stdout, 'pipe']
 		});
+		let result = '';
+		if (silent) {
+			child.stdout.on('data', function(data) {
+				result += data.toString();
+			});
+		}
 		/*
 		let errorBuffer = '';
 		child.stderr.on('data', function(data) {
@@ -50,7 +57,7 @@ function child(command) {
 				// console.log(`ps process exited with code ${code}`);
 				reject(code);
 			} else {
-				resolve();
+				resolve(result);
 			}
 		});
 		/*
@@ -90,27 +97,28 @@ function child_(command) {
 	});
 }
 
-function serve() {
-	return child(`ng serve --open`).then(success => {
-
+function nodeVersion() {
+	return child(`node -v`, true).then(success => {
+		return success.replace('\n', '');
 	}, error => {
-		console.log('');
+		return error;
 	});
 }
 
-function build(target) {
-	return child(`npm run build:${target}`).then(success => {
-
+function npmVersion() {
+	return child(`npm -v`, true).then(success => {
+		return success.replace('\n', '');
 	}, error => {
-		console.log('');
+		return error;
 	});
 }
 
-function pubver(target) {
-	return child(`npm run build:${target}`).then(success => {
-
+function ngVersion() {
+	return child(`ng version`, true).then(success => {
+		const matches = String(success).match(/Angular\sCLI\:\s(.*)\n/);
+		return matches.length > 1 ? matches[1] : null;
 	}, error => {
-		console.log('');
+		return error;
 	});
 }
 
@@ -122,7 +130,44 @@ function npmPublish(folder) {
 	return child(`npm -v --prefix "${folder}"`);
 }
 
+function serve() {
+	return new Promise((resolve, reject) => {
+		files.exists(path.join(process.cwd(), 'angular.json')).then(success => {
+			child(`ng serve --open`).then(success => {
+				resolve(success);
+			}, error => {
+				reject(error);
+			});
+		}, error => {
+			reject(`angular.json missing at path ${process.cwd()}`);
+		});
+	});
+}
+
+function build(target) {
+	const tasks = target === 'docs' ? [
+		() => child(`ng build browser --configuration=${target}`),
+	] : [
+		() => child(`ng build browser --configuration=${target}`),
+		() => child(`ng build server --configuration=${target}`),
+		() => files.replace(`./dist/${target}/server/main.js`, new RegExp('angular-in.memory-web-api(.[^\\\"]*)', 'gm'), 'angular-in-memory-web-api'),
+	];
+	return files.serial(tasks);
+}
+
+function pubver(target) {
+	return child(`npm run build:${target}`).then(success => {
+
+	}, error => {
+		console.log('');
+	});
+}
+
 module.exports = {
+	child,
+	nodeVersion,
+	npmVersion,
+	ngVersion,
 	npmInstall,
 	npmPublish,
 	serve,

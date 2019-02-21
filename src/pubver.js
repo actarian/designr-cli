@@ -38,6 +38,7 @@ function publish(version) {
 	return new Promise((resolve, reject) => {
 		const configPath = path.join(process.cwd(), 'designr.json');
 		files.readFileJson(configPath).then(config => {
+			config.version = '0.0.2'; // !!!
 			if (version) {
 				if (isValidVersion(version, config.version)) {
 					config.version = version;
@@ -52,11 +53,14 @@ function publish(version) {
 			if (!directories.length) {
 				return reject('no projects to publish');
 			}
+			const names = [];
 			const packages = directories.map(folder => {
 				// console.log(path.basename(folder));
 				const name = path.basename(folder);
 				const file = path.join(folder, 'package.json');
 				return files.readFile(file).then(content => {
+					// names.push(content.match(/\"name\"\:\s.\"(.*)\"/)[1]);
+					names.push(content.split('"name": "')[1].split('"')[0]);
 					content = content.replace(/(\"version\":\s*\"[\d\.]*\")/g, `\"version\": \"${config.version}\"`);
 					return files.writeFile(content, file);
 				});
@@ -75,10 +79,16 @@ function publish(version) {
 				...packages,
 				...components,
 			]).then(results => {
+				const builds = names.map(x => () => command.child(`ng build ${x}`));
 				const distPath = path.join(process.cwd(), 'dist', config.library);
-				return files.serial(directories.map(x => () => {
+				const directories = files.getDirectories(distPath);
+				const publish = directories.map(x => () => {
 					return command.npmPublish(x);
-				})).then(results => {
+				});
+				return files.serial([
+					...builds,
+					// ...publish,
+				]).then(results => {
 					resolve(results);
 				}, error => {
 					reject(error);
