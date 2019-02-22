@@ -4,14 +4,14 @@ const clui = require('clui');
 const compareVersions = require('compare-versions');
 const downloadGitRepo = require('download-git-repo');
 const figlet = require('figlet');
-const inquirer = require('inquirer');
 const minimist = require('minimist');
 const path = require('path');
 //
-const files = require('./files');
 const command = require('./command');
-const pubver = require('./pubver');
 const debug = require('./debug');
+const files = require('./files');
+const inquirer_ = require('./inquirer');
+const pubver = require('./pubver');
 const github = require('./_github');
 const repo = require('./_repo');
 //
@@ -79,13 +79,16 @@ class DesignerCli {
 					promise.then(success => {
 						console.log(chalk.cyan('designr-cli:'), chalk.green('success'));
 					}, error => {
-						console.log(chalk.red('error:'), chalk.yellow(error));
+						if (error !== 1) {
+							this.error_(error);
+						}
 						process.exit();
 					});
+				} else {
+					this.error_(`unknown command ${commands[0]}`);
 				}
 			}, error => {
-				console.log(chalk.red('error:'), chalk.yellow(error));
-				process.exit();
+				this.error_(error);
 			});
 		} else {
 			new clui.Line()
@@ -98,40 +101,125 @@ class DesignerCli {
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('create'), 12)
-				.column(chalk.cyan('<appName?>'), 16)
+				.column(chalk.cyan('appName?'), 16)
 				.column(chalk.green('create a new app'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('serve'), 12)
-				.column(chalk.cyan('<target?>'), 16)
+				.column(chalk.cyan('target?'), 16)
 				.column(chalk.green('run a development server on target'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('build'), 12)
-				.column(chalk.cyan('<target?>'), 16)
+				.column(chalk.cyan('target?'), 16)
 				.column(chalk.green('build browser and server for target'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('debug'), 12)
-				.column(chalk.cyan('<target?>'), 16)
+				.column(chalk.cyan('target?'), 16)
 				.column(chalk.green('debug server for target'), 40)
 				.fill()
 				.output();
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('pubver'), 12)
-				.column(chalk.cyan('<version?>'), 16)
+				.column(chalk.cyan('version?'), 16)
 				.column(chalk.green('publish a new version to npm'), 40)
 				.fill()
 				.output();
 		}
 		console.log('');
+	}
+
+	create(appName) {
+		return new Promise((resolve, reject) => {
+			appName = appName || 'designr-cli';
+			console.log(chalk.red('create:'), chalk.cyan(appName));
+			const appFolder = this.getAppFolder_(appName);
+			files.isDirectoryEmpty(appFolder).then(empty => {
+				return files.serial([
+					async () => await this.download_(appName, '.'),
+						() => this.install_(appName, '.'),
+						() => this.serve_(appName, '.')
+				]).then(success => resolve(success, error => reject(error)));
+			}, error => {
+				if (Array.isArray(error)) {
+					reject(`directory is not empty ${appFolder}`);
+				} else {
+					reject(error);
+				}
+			});
+		});
+		/*
+		if (files.directoryExists(appFolder)) {
+			console.log(chalk.red(`directory exist at path:`), chalk.cyan(`${appName}/Client`));
+			process.exit();
+		} else {
+			return files.serial([
+				() => this.download_(appName, appFolder),
+				() => this.install_(appName, appFolder),
+				() => this.serve_(appName, appFolder)
+			]);
+		}
+		*/
+	}
+
+	serve(target) {
+		target = target || 'development';
+		console.log(chalk.red('serve:'), chalk.cyan(target));
+		return command.serve(target);
+	}
+
+	async build(target) {
+		target = target || await inquirer_.askTarget();
+		console.log(chalk.red('build:'), chalk.cyan(target));
+		return command.build(target);
+	}
+
+	async debug(target) {
+		target = target || await inquirer_.askTarget();
+		console.log(chalk.red('debug:'), chalk.cyan(target));
+		return debug.run(target).then((result) => {
+			process.exit();
+		}, error => {
+			this.error_(error);
+		});
+	}
+
+	async pubver(version) {
+		return pubver.getNextConfig(version).then(async (config) => {
+			console.log(chalk.red('pubver:'), chalk.cyan(config.version));
+			const results = await inquirer_.askPublishConfirm(config.version);
+			if (results.publish) {
+				pubver.publish(config.version);
+			} else {
+				console.log('');
+				process.exit();
+			}
+		}, error => {
+			console.log(chalk.red('pubver:'), chalk.cyan(process.cwd()));
+			this.error_(error);
+		});
+	}
+
+	version() {
+		const infoPath = path.join(__dirname, '..', 'package.json');
+		files.readFileJson(infoPath).then(info => {
+			console.log(chalk.red('version:'), chalk.cyan('@designr/cli'), info.version);
+		}, error => {
+			this.error_(error);
+		});
+	}
+
+	error_(error) {
+		console.log(chalk.red('error:'), chalk.yellow(error), '\n');
+		process.exit();
 	}
 
 	checkVersions_() {
@@ -190,14 +278,7 @@ class DesignerCli {
 	}
 
 	async download_(appName, appFolder) {
-		const questions = [{
-			type: 'list',
-			name: 'projectType',
-			message: 'Choose project type:',
-			choices: ['Default'],
-			default: 'Default'
-		}];
-		const results = await inquirer.prompt(questions);
+		const results = await inquirer_.askProjectType();
 		let path = GIT_PATH_DEFAULT;
 		if (results.projectType === 'Default') {
 			path = GIT_PATH_DEFAULT;
@@ -214,103 +295,6 @@ class DesignerCli {
 					resolve(appName);
 				}
 			});
-		});
-	}
-
-	async selectTarget_() {
-		const questions = [{
-			type: 'list',
-			name: 'target',
-			message: 'Choose target:',
-			choices: ['development', 'stage', 'production'],
-			default: 'development'
-		}];
-		const results = await inquirer.prompt(questions);
-		return results.target;
-	}
-
-	create(appName) {
-		appName = appName || 'designr-cli';
-		console.log(chalk.red('create:'), chalk.cyan(appName));
-		const appFolder = this.getAppFolder_(appName);
-		files.isDirectoryEmpty(appFolder).then(empty => {
-			return files.serial([
-				async () => await this.download_(appName, '.'),
-					() => this.install_(appName, '.'),
-					() => this.serve_(appName, '.')
-			]);
-		}, error => {
-			if (Array.isArray(error)) {
-				console.log(chalk.red(`directory is not empty:`), chalk.cyan(`${appFolder}`));
-			} else {
-				console.log(chalk.red(`${error}`));
-			}
-			process.exit();
-		});
-		/*
-		if (files.directoryExists(appFolder)) {
-			console.log(chalk.red(`directory exist at path:`), chalk.cyan(`${appName}/Client`));
-			process.exit();
-		} else {
-			return files.serial([
-				() => this.download_(appName, appFolder),
-				() => this.install_(appName, appFolder),
-				() => this.serve_(appName, appFolder)
-			]);
-		}
-		*/
-	}
-
-	serve(target) {
-		target = target || 'development';
-		console.log(chalk.red('serve:'), chalk.cyan(target));
-		return command.serve(target);
-	}
-
-	async build(target) {
-		target = target || await this.selectTarget_();
-		console.log(chalk.red('build:'), chalk.cyan(target));
-		return command.build(target);
-	}
-
-	async debug(target) {
-		target = target || await this.selectTarget_();
-		console.log(chalk.red('debug:'), chalk.cyan(target));
-		return debug.run(target).then((result) => {
-			process.exit();
-		}, error => {
-			console.log(chalk.red(`${error}`));
-			process.exit();
-		});
-	}
-
-	async pubver(version) {
-		return pubver.getNextConfig(version).then(async (config) => {
-			console.log(chalk.red('pubver:'), chalk.cyan(config.version));
-			const questions = [{
-				name: 'publish',
-				type: 'confirm',
-				message: `Want to publish version ${config.version}`
-			}];
-			const result = await inquirer.prompt(questions);
-			if (result.publish) {
-				pubver.publish(config.version);
-			} else {
-				console.log('');
-				process.exit();
-			}
-		}, error => {
-			console.log(chalk.red(`error:`), chalk.yellow(`${error}`));
-			process.exit();
-		});
-	}
-
-	version() {
-		const infoPath = path.join(__dirname, '..', 'package.json');
-		files.readFileJson(infoPath).then(info => {
-			console.log(chalk.cyan('@designr/cli'), info.version);
-		}, error => {
-			console.log(chalk.red(error));
 		});
 	}
 

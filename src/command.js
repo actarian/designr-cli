@@ -128,6 +128,7 @@ function npmInstall(folder) {
 
 function npmPublish(folder) {
 	return child(`npm -v --prefix "${folder}"`);
+	// return child(`npm publish --access public --prefix "${folder}"`);
 }
 
 function serve() {
@@ -145,21 +146,23 @@ function serve() {
 }
 
 function build(target) {
-	const tasks = target === 'docs' ? [
-		() => child(`ng build browser --configuration=${target}`),
-	] : [
-		() => child(`ng build browser --configuration=${target}`),
-		() => child(`ng build server --configuration=${target}`),
-		() => files.replace(`./dist/${target}/server/main.js`, new RegExp('angular-in.memory-web-api(.[^\\\"]*)', 'gm'), 'angular-in-memory-web-api'),
-	];
-	return files.serial(tasks);
-}
-
-function pubver(target) {
-	return child(`npm run build:${target}`).then(success => {
-
-	}, error => {
-		console.log('');
+	return new Promise((resolve, reject) => {
+		files.exists(path.join(process.cwd(), 'angular.json')).then(success => {
+			const tasks = target === 'docs' ? [
+				() => child(`ng build browser --configuration=${target}`),
+			] : [
+				() => child(`ng build browser --configuration=${target}`),
+				() => child(`ng build server --configuration=${target}`),
+				() => files.replace(`./dist/${target}/server/main.js`, new RegExp('angular-in.memory-web-api(.[^\\\"]*)', 'gm'), 'angular-in-memory-web-api'),
+			];
+			return files.serial(tasks).then(success => {
+				resolve(success);
+			}, error => {
+				reject(error);
+			});
+		}, error => {
+			reject(`angular.json missing at path ${process.cwd()}`);
+		});
 	});
 }
 
@@ -172,5 +175,4 @@ module.exports = {
 	npmPublish,
 	serve,
 	build,
-	pubver,
 };

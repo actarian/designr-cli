@@ -4,7 +4,7 @@ const git = require('simple-git')();
 const clui = require('clui');
 const touch = require('touch');
 
-const inquirer = require('./_inquirer');
+const inquirer = require('./inquirer');
 const gh = require('./_github');
 
 module.exports = {
