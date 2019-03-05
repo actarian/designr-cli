@@ -10,7 +10,8 @@ const files = require('./files');
 function run(target) {
 	return new Promise((resolve, reject) => {
 		target = target || 'development';
-		const mainPath = path.join(process.cwd(), 'dist', target, 'server', 'main.js');
+		const segments = [...(target === 'docs' ? [target] : ['dist', target, 'server']), 'main.js'];
+		const mainPath = path.join(process.cwd(), ...segments);
 		files.exists(mainPath).then(exist => {
 			// run(target);
 			const main = require(mainPath);
@@ -21,7 +22,7 @@ function run(target) {
 				reject(error);
 			});
 		}, error => {
-			reject(`file /dist/${target}/server/main.js not found`);
+			reject(`file ${path.join(segments)} not found`);
 		});
 	});
 }

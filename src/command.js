@@ -122,6 +122,14 @@ function ngVersion() {
 	});
 }
 
+function sourceMapExplorerVersion() {
+	return child(`source-map-explorer --version`, true).then(success => {
+		return success.replace('\n', '');
+	}, error => {
+		return error;
+	});
+}
+
 function npmInstall(folder) {
 	return child(`npm install`); // --prefix "${folder}"
 }
@@ -129,6 +137,14 @@ function npmInstall(folder) {
 function npmPublish(folder) {
 	return child(`npm -v --prefix "${folder}"`);
 	// return child(`npm publish --access public --prefix "${folder}"`);
+}
+
+function sourceMapExplorer(src) {
+	return child(`source-map-explorer ${src}`);
+}
+
+function sourceMapExplorerInstall(folder) {
+	return child(`npm install source-map-explorer -g`);
 }
 
 function serve() {
@@ -167,12 +183,15 @@ function build(target) {
 }
 
 module.exports = {
+	build,
 	child,
-	nodeVersion,
-	npmVersion,
 	ngVersion,
+	nodeVersion,
 	npmInstall,
 	npmPublish,
+	npmVersion,
 	serve,
-	build,
+	sourceMapExplorer,
+	sourceMapExplorerInstall,
+	sourceMapExplorerVersion,
 };

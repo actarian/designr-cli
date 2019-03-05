@@ -197,6 +197,18 @@ function exists(src) {
 	});
 }
 
+function find(src, regexp) {
+	return new Promise((resolve, reject) => {
+		fs.readdir(src, (error, files) => {
+			// console.log(src, error, files);
+			if (error) {
+				return reject(error);
+			}
+			resolve(files.filter(x => regexp.test(x)));
+		});
+	});
+}
+
 function replace(src, textOrRegexp, replacementText) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(src, 'utf8', function(error, data) {
@@ -214,21 +226,22 @@ function replace(src, textOrRegexp, replacementText) {
 }
 
 module.exports = {
-	getCurrentDirectoryBase,
-	directoryExists,
 	changeCwd,
-	isDirectory,
-	getDirectories,
-	isDirectoryEmpty,
-	readFiles,
-	copyFolder,
 	copyFile,
+	copyFolder,
+	directoryExists,
+	exists,
+	existsOrCreateFolder,
+	find,
+	getCurrentDirectoryBase,
+	getDirectories,
+	isDirectory,
+	isDirectoryEmpty,
 	readFile,
 	readFileJson,
+	readFiles,
+	replace,
+	serial,
 	writeFile,
 	writeFileJson,
-	existsOrCreateFolder,
-	serial,
-	exists,
-	replace,
 };

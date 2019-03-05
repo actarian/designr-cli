@@ -18,7 +18,7 @@ async function askTarget() {
 		type: 'list',
 		name: 'target',
 		message: 'Choose target:',
-		choices: ['development', 'stage', 'production'],
+		choices: ['development', 'stage', 'production', 'docs'],
 		default: 'development'
 	}];
 	const results = await inquirer.prompt(questions);

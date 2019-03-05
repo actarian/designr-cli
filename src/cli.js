@@ -9,6 +9,7 @@ const path = require('path');
 //
 const command = require('./command');
 const debug = require('./debug');
+const explorer = require('./explorer');
 const files = require('./files');
 const inquirer_ = require('./inquirer');
 const pubver = require('./pubver');
@@ -28,6 +29,7 @@ class DesignerCli {
 	serve       <target?>       run a development server on target
 	build       <target?>       build browser and server for target
 	debug       <target?>       debug server for target
+	explorer	<target?>       sourcemap explorer for target
 	pubver      <version?>      publish a new version to npm
 	*/
 
@@ -66,6 +68,9 @@ class DesignerCli {
 						break;
 					case 'debug':
 						promise = this.debug(commands[1]);
+						break;
+					case 'explorer':
+						promise = this.explorer(commands[1]);
 						break;
 					case 'pubver':
 						promise = this.pubver(commands[1]);
@@ -128,6 +133,13 @@ class DesignerCli {
 				.output();
 			new clui.Line()
 				.padding(1)
+				.column(chalk.cyan('explorer'), 12)
+				.column(chalk.cyan('target?'), 16)
+				.column(chalk.green('sourcemap explorer for target'), 40)
+				.fill()
+				.output();
+			new clui.Line()
+				.padding(1)
 				.column(chalk.cyan('pubver'), 12)
 				.column(chalk.cyan('version?'), 16)
 				.column(chalk.green('publish a new version to npm'), 40)
@@ -186,6 +198,16 @@ class DesignerCli {
 		target = target || await inquirer_.askTarget();
 		console.log(chalk.red('debug:'), chalk.cyan(target));
 		return debug.run(target).then((result) => {
+			process.exit();
+		}, error => {
+			this.error_(error);
+		});
+	}
+
+	async explorer(target) {
+		target = target || await inquirer_.askTarget();
+		console.log(chalk.red('explorer:'), chalk.cyan(target));
+		return explorer.run(target).then((result) => {
 			process.exit();
 		}, error => {
 			this.error_(error);
