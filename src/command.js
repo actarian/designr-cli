@@ -118,8 +118,8 @@ function npmInstall(folder) {
 }
 
 function npmPublish(folder) {
-	return child(`npm -v --prefix "${folder}"`);
-	// return child(`npm publish --access public --prefix "${folder}"`);
+	// return child(`npm -v --prefix "${folder}"`);
+	return child(`npm publish ${folder} --access public`);
 }
 
 function serve() {

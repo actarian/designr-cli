@@ -22,6 +22,9 @@ const NODE_VERSION = '10.0.0';
 const NPM_VERSION = '5.8.0';
 const NG_VERSION = '7.0.0';
 //
+const EXPLORER = false;
+const PUBVER = true;
+//
 class DesignerCli {
 
 	/*
@@ -74,10 +77,14 @@ class DesignerCli {
 						promise = this.analyzer(commands[1]);
 						break;
 					case 'explorer':
-						promise = this.explorer(commands[1]);
+						if (EXPLORER) {
+							promise = this.explorer(commands[1]);
+						}
 						break;
 					case 'pubver':
-						promise = this.pubver(commands[1]);
+						if (PUBVER) {
+							promise = this.pubver(commands[1]);
+						}
 						break;
 					case 'v':
 					case 'version':
@@ -135,13 +142,15 @@ class DesignerCli {
 				.column(chalk.green('debug server for target'), 40)
 				.fill()
 				.output();
-			new clui.Line()
-				.padding(1)
-				.column(chalk.cyan('explorer'), 12)
-				.column(chalk.cyan('target?'), 16)
-				.column(chalk.green('sourcemap explorer for target'), 40)
-				.fill()
-				.output();
+			if (EXPLORER) {
+				new clui.Line()
+					.padding(1)
+					.column(chalk.cyan('explorer'), 12)
+					.column(chalk.cyan('target?'), 16)
+					.column(chalk.green('sourcemap explorer for target'), 40)
+					.fill()
+					.output();
+			}
 			new clui.Line()
 				.padding(1)
 				.column(chalk.cyan('analyzer'), 12)
@@ -149,13 +158,15 @@ class DesignerCli {
 				.column(chalk.green('webpack analyzer for target'), 40)
 				.fill()
 				.output();
-			new clui.Line()
-				.padding(1)
-				.column(chalk.cyan('pubver'), 12)
-				.column(chalk.cyan('version?'), 16)
-				.column(chalk.green('publish a new version to npm'), 40)
-				.fill()
-				.output();
+			if (PUBVER) {
+				new clui.Line()
+					.padding(1)
+					.column(chalk.cyan('pubver'), 12)
+					.column(chalk.cyan('version?'), 16)
+					.column(chalk.green('publish a new version to npm'), 40)
+					.fill()
+					.output();
+			}
 		}
 		console.log('');
 	}

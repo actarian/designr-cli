@@ -38,7 +38,6 @@ function publish(version) {
 	return new Promise((resolve, reject) => {
 		const configPath = path.join(process.cwd(), 'designr.json');
 		files.readFileJson(configPath).then(config => {
-			config.version = '0.0.2'; // !!!
 			if (version) {
 				if (isValidVersion(version, config.version)) {
 					config.version = version;
@@ -87,7 +86,7 @@ function publish(version) {
 				});
 				return files.serial([
 					...builds,
-					// ...publish,
+					...publish,
 				]).then(results => {
 					resolve(results);
 				}, error => {
