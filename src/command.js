@@ -1,36 +1,7 @@
 const path = require('path');
-const spawn = require('spawn-command-with-kill');
+// const spawn = require('spawn-command-with-kill');
 const childProcess = require('child_process');
 const files = require('./files');
-
-function npmInstall__(folder) {
-	return new Promise((resolve, reject) => {
-		const previous = process.cwd();
-		process.chdir(folder);
-		const config = {
-			'bin-links': false,
-			verbose: true,
-			prefix: folder,
-		};
-		const npm = require('npm');
-		npm.load(config, (error) => {
-			if (error) {
-				return reject(error);
-			}
-			npm.commands.install([], (error, data) => {
-				process.chdir(previous);
-				if (error) {
-					reject(error);
-				} else {
-					resolve(data);
-				}
-			});
-			npm.on('log', (message) => {
-				console.log(message);
-			});
-		});
-	});
-}
 
 function child(command, silent) {
 	return new Promise((resolve, reject) => {
@@ -60,10 +31,10 @@ function child(command, silent) {
 				resolve(result);
 			}
 		});
-		/*
 		child.on('error', (err) => {
-			console.log('Failed to start subprocess.');
+			reject(`Failed to spawn command ${command}`);
 		});
+		/*
 		child.on('exit', (error) => {
 			if (!error) {
 				resolve();
@@ -75,59 +46,71 @@ function child(command, silent) {
 	});
 }
 
-function child_(command) {
-	return new Promise((resolve, reject) => {
-		const childProcess = spawn(command);
-		childProcess.stdout.on('data', (data) => {
-			process.stdout.write(data);
-		});
-		childProcess.stderr.on('data', (data) => {
-			process.stderr.write(data);
-		});
-		childProcess.on('exit', (code) => {
-			if (code === 0) {
-				setTimeout(() => {
-					resolve(true);
-				}, 1000);
-			} else {
-				reject();
-			}
-		});
-		childProcess.kill();
-	});
-}
-
 function nodeVersion() {
-	return child(`node -v`, true).then(success => {
-		return success.replace('\n', '');
-	}, error => {
-		return error;
+	return new Promise((resolve, reject) => {
+		child(`node -v`, true).then(success => {
+			resolve(success.replace('\n', ''));
+		}, error => {
+			reject(error);
+		});
 	});
 }
 
 function npmVersion() {
-	return child(`npm -v`, true).then(success => {
-		return success.replace('\n', '');
-	}, error => {
-		return error;
+	return new Promise((resolve, reject) => {
+		child(`npm -v`, true).then(success => {
+			resolve(success.replace('\n', ''));
+		}, error => {
+			reject(error);
+		});
 	});
 }
 
 function ngVersion() {
-	return child(`ng version`, true).then(success => {
-		const matches = String(success).match(/Angular\sCLI\:\s(.*)\n/);
-		return matches.length > 1 ? matches[1] : null;
-	}, error => {
-		return error;
+	return new Promise((resolve, reject) => {
+		child(`ng version`, true).then(success => {
+			const matches = String(success).match(/Angular\sCLI\:\s(.*)\n/);
+			resolve(matches.length > 1 ? matches[1] : null);
+		}, error => {
+			reject(error);
+		});
 	});
 }
 
 function sourceMapExplorerVersion() {
-	return child(`source-map-explorer --version`, true).then(success => {
-		return success.replace('\n', '');
-	}, error => {
-		return error;
+	return new Promise((resolve, reject) => {
+		child(`source-map-explorer --version`, true).then(success => {
+			resolve(success.replace('\n', ''));
+		}, error => {
+			reject(error);
+		});
 	});
+}
+
+function sourceMapExplorer(src) {
+	return child(`source-map-explorer ${src}`);
+}
+
+function sourceMapExplorerInstall(folder) {
+	return child(`npm install source-map-explorer -g`);
+}
+
+function bundleAnalyzerVersion() {
+	return new Promise((resolve, reject) => {
+		child(`webpack-bundle-analyzer --version`, true).then(success => {
+			resolve(success.replace('\n', ''));
+		}, error => {
+			reject(error);
+		});
+	});
+}
+
+function bundleAnalyzer(src) {
+	return child(`webpack-bundle-analyzer ${src}`);
+}
+
+function bundleAnalyzerInstall(folder) {
+	return child(`npm install webpack-bundle-analyzer -g`);
 }
 
 function npmInstall(folder) {
@@ -137,14 +120,6 @@ function npmInstall(folder) {
 function npmPublish(folder) {
 	return child(`npm -v --prefix "${folder}"`);
 	// return child(`npm publish --access public --prefix "${folder}"`);
-}
-
-function sourceMapExplorer(src) {
-	return child(`source-map-explorer ${src}`);
-}
-
-function sourceMapExplorerInstall(folder) {
-	return child(`npm install source-map-explorer -g`);
 }
 
 function serve() {
@@ -194,4 +169,60 @@ module.exports = {
 	sourceMapExplorer,
 	sourceMapExplorerInstall,
 	sourceMapExplorerVersion,
+	bundleAnalyzer,
+	bundleAnalyzerInstall,
+	bundleAnalyzerVersion,
 };
+
+/*
+function npmInstall__(folder) {
+	return new Promise((resolve, reject) => {
+		const previous = process.cwd();
+		process.chdir(folder);
+		const config = {
+			'bin-links': false,
+			verbose: true,
+			prefix: folder,
+		};
+		const npm = require('npm');
+		npm.load(config, (error) => {
+			if (error) {
+				return reject(error);
+			}
+			npm.commands.install([], (error, data) => {
+				process.chdir(previous);
+				if (error) {
+					reject(error);
+				} else {
+					resolve(data);
+				}
+			});
+			npm.on('log', (message) => {
+				console.log(message);
+			});
+		});
+	});
+}
+
+function child_(command) {
+	return new Promise((resolve, reject) => {
+		const childProcess = spawn(command);
+		childProcess.stdout.on('data', (data) => {
+			process.stdout.write(data);
+		});
+		childProcess.stderr.on('data', (data) => {
+			process.stderr.write(data);
+		});
+		childProcess.on('exit', (code) => {
+			if (code === 0) {
+				setTimeout(() => {
+					resolve(true);
+				}, 1000);
+			} else {
+				reject();
+			}
+		});
+		childProcess.kill();
+	});
+}
+*/

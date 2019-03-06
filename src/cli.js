@@ -7,6 +7,7 @@ const figlet = require('figlet');
 const minimist = require('minimist');
 const path = require('path');
 //
+const analyzer = require('./analyzer');
 const command = require('./command');
 const debug = require('./debug');
 const explorer = require('./explorer');
@@ -68,6 +69,9 @@ class DesignerCli {
 						break;
 					case 'debug':
 						promise = this.debug(commands[1]);
+						break;
+					case 'analyzer':
+						promise = this.analyzer(commands[1]);
 						break;
 					case 'explorer':
 						promise = this.explorer(commands[1]);
@@ -140,6 +144,13 @@ class DesignerCli {
 				.output();
 			new clui.Line()
 				.padding(1)
+				.column(chalk.cyan('analyzer'), 12)
+				.column(chalk.cyan('target?'), 16)
+				.column(chalk.green('webpack analyzer for target'), 40)
+				.fill()
+				.output();
+			new clui.Line()
+				.padding(1)
 				.column(chalk.cyan('pubver'), 12)
 				.column(chalk.cyan('version?'), 16)
 				.column(chalk.green('publish a new version to npm'), 40)
@@ -208,6 +219,16 @@ class DesignerCli {
 		target = target || await inquirer_.askTarget();
 		console.log(chalk.red('explorer:'), chalk.cyan(target));
 		return explorer.run(target).then((result) => {
+			process.exit();
+		}, error => {
+			this.error_(error);
+		});
+	}
+
+	async analyzer(target) {
+		target = target || await inquirer_.askTarget();
+		console.log(chalk.red('analyzer:'), chalk.cyan(target));
+		return analyzer.run(target).then((result) => {
 			process.exit();
 		}, error => {
 			this.error_(error);
