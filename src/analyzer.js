@@ -12,7 +12,15 @@ function run(target) {
 		const errorMessage = `file not found ${path.join(...segments, 'stats.json')}`;
 		const src = path.join(process.cwd(), ...segments, 'stats.json');
 		files.exists(src).then(success => {
-			console.log(src);
+			// console.log(src);
+			files.serial([
+				() => command.bundleAnalyzer(src),
+			]).then(results => {
+				resolve(results);
+			}, error => {
+				reject(error);
+			});
+			/*
 			command.bundleAnalyzerVersion().then(version => {
 				if (compareVersions(version, BUNDLE_ANALYZER_VERSION) === -1) {
 					// ??? locally?
@@ -28,6 +36,7 @@ function run(target) {
 			}, error => {
 				reject(error);
 			});
+			*/
 		}, error => {
 			reject(errorMessage);
 		});

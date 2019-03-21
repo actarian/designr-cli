@@ -79,7 +79,7 @@ function ngVersion() {
 
 function sourceMapExplorerVersion() {
 	return new Promise((resolve, reject) => {
-		child(`source-map-explorer --version`, true).then(success => {
+		child(`npx source-map-explorer --version`, true).then(success => {
 			resolve(success.replace('\n', ''));
 		}, error => {
 			reject(error);
@@ -88,7 +88,7 @@ function sourceMapExplorerVersion() {
 }
 
 function sourceMapExplorer(src) {
-	return child(`source-map-explorer ${src}`);
+	return child(`npx source-map-explorer ${src}`);
 }
 
 function sourceMapExplorerInstall(folder) {
@@ -97,7 +97,7 @@ function sourceMapExplorerInstall(folder) {
 
 function bundleAnalyzerVersion() {
 	return new Promise((resolve, reject) => {
-		child(`webpack-bundle-analyzer --version`, true).then(success => {
+		child(`npx webpack-bundle-analyzer --version`, true).then(success => {
 			resolve(success.replace('\n', ''));
 		}, error => {
 			reject(error);
@@ -106,7 +106,7 @@ function bundleAnalyzerVersion() {
 }
 
 function bundleAnalyzer(src) {
-	return child(`webpack-bundle-analyzer ${src}`);
+	return child(`npx webpack-bundle-analyzer ${src}`);
 }
 
 function bundleAnalyzerInstall(folder) {
