@@ -1,16 +1,23 @@
 const path = require('path');
 // const spawn = require('spawn-command-with-kill');
 const childProcess = require('child_process');
+const spawn = require('cross-spawn');
 const files = require('./files');
 
 function child(command, silent) {
 	return new Promise((resolve, reject) => {
 		const args = command.split(' ');
 		const name = args.shift();
+		const child = spawn(name, args, {
+			stdio: silent ? 'pipe' : 'inherit',
+			// stdio: [process.stdin, process.stdout, 'pipe']
+		});
+		/*
 		const child = childProcess.spawn(name, args, {
 			stdio: silent ? 'pipe' : 'inherit',
 			// stdio: [process.stdin, process.stdout, 'pipe']
 		});
+		*/
 		let result = '';
 		if (silent) {
 			child.stdout.on('data', function(data) {
@@ -68,7 +75,7 @@ function npmVersion() {
 
 function ngVersion() {
 	return new Promise((resolve, reject) => {
-		child(`ng version`, true).then(success => {
+		child(`npx ng version`, true).then(success => {
 			const matches = String(success).match(/Angular\sCLI\:\s(.*)\n/);
 			resolve(matches.length > 1 ? matches[1] : null);
 		}, error => {

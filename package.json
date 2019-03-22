@@ -1,6 +1,6 @@
 {
 	"name": "@designr/cli",
-	"version": "0.0.3",
+	"version": "0.0.6",
 	"description": "CLI for Designr lib",
 	"main": "index.js",
 	"engines": {
@@ -25,6 +25,7 @@
 		"clui": "^0.3.6",
 		"compare-versions": "~3.4.0",
 		"configstore": "^3.1.1",
+		"cross-spawn": "^6.0.5",
 		"download-git-repo": "^1.1.0",
 		"figlet": "^1.2.0",
 		"inquirer": "^5.0.1",
