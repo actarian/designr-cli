@@ -220,6 +220,7 @@ class DesignerCli {
 		target = target || await inquirer_.askTarget();
 		console.log(chalk.red('debug:'), chalk.cyan(target));
 		return debug.run(target).then((result) => {
+			console.log(chalk.green('OK!'), chalk.cyan(target));
 			process.exit();
 		}, error => {
 			this.error_(error);

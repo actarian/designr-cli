@@ -1,5 +1,11 @@
-const path = require('path');
+const chalk = require('chalk');
 const files = require('./files');
+const htmlparser2 = require('htmlparser2');
+const http = require('http');
+const opn = require('opn');
+const path = require('path');
+
+const BASE_URL = 'https://eurospin-viaggi2.wslabs.it/'; // 'https://development.labs.it/'
 
 /*
 "debug:development": "node -e \"require('./utils/debug.js')(require('./dist/development/server/main.js').default, 'https://development.labs.it/')\"",
@@ -16,8 +22,11 @@ function run(target) {
 			// run(target);
 			const main = require(mainPath);
 			// console.log(main);
-			render(main.default, 'https://development.labs.it/').then(result => {
-				resolve(result);
+			render(main.default, BASE_URL).then(result => {
+				(async () => {
+					await open(result);
+					resolve(result);
+				})();
 			}, error => {
 				reject(error);
 			});
@@ -25,6 +34,43 @@ function run(target) {
 			reject(`file ${path.join(segments)} not found`);
 		});
 	});
+}
+
+async function open(result) {
+	const server = http.createServer((request, response) => {
+		response.writeHeader(200, { 'Content-Type': 'text/html' });
+		response.write(result.html);
+		response.end();
+	}).listen(43210);
+	console.log(chalk.cyan('listening port 43210...'));
+	await opn('http://localhost:43210', { wait: true });
+	server.close();
+	/*
+	await opn('http://localhost:43210');
+	*/
+}
+
+function parse(result) {
+	const names = ['script', 'style'];
+	let name, tab = 0;
+	const parser = new htmlparser2.Parser({
+		onopentag: (tagName, attributes) => {
+			name = tagName;
+			tab++;
+		},
+		ontext: (text) => {
+			if (names.indexOf(name) === -1) {
+				const tabs = new Array(tab).fill(' ').join('');
+				console.log(chalk.green(tabs + text));
+			}
+		},
+		onclosetag: (tagName) => {
+			tab--;
+		}
+	}, { decodeEntities: true });
+	parser.write(result.html);
+	parser.end();
+	console.log(Object.keys(result));
 }
 
 function render(callback, baseUrl) {
