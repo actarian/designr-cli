@@ -71,7 +71,7 @@ class DesignerCli {
 						promise = this.build(commands[1]);
 						break;
 					case 'debug':
-						promise = this.debug(commands[1]);
+						promise = this.debug(commands[1], argv);
 						break;
 					case 'analyzer':
 						promise = this.analyzer(commands[1]);
@@ -216,10 +216,10 @@ class DesignerCli {
 		return command.build(target);
 	}
 
-	async debug(target) {
+	async debug(target, options) {
 		target = target || await inquirer_.askTarget();
 		console.log(chalk.red('debug:'), chalk.cyan(target));
-		return debug.run(target).then((result) => {
+		return debug.run(target, options).then((result) => {
 			console.log(chalk.green('OK!'), chalk.cyan(target));
 			process.exit();
 		}, error => {

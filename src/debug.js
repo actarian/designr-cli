@@ -5,7 +5,8 @@ const http = require('http');
 const opn = require('opn');
 const path = require('path');
 
-const BASE_URL = 'https://eurospin-viaggi2.wslabs.it/'; // 'https://development.labs.it/'
+const DEFAULT_URL = 'https://eurospin-viaggi2.wslabs.it/'; // 'https://development.labs.it/'
+const DEFAULT_SLUG = '/';
 
 /*
 "debug:development": "node -e \"require('./utils/debug.js')(require('./dist/development/server/main.js').default, 'https://development.labs.it/')\"",
@@ -13,7 +14,7 @@ const BASE_URL = 'https://eurospin-viaggi2.wslabs.it/'; // 'https://development.
 "debug:production": "node -e \"require('./utils/debug.js')(require('./dist/production/server/main.js').default, 'https://www.site.it/')\""
 */
 
-function run(target) {
+function run(target, options) {
 	return new Promise((resolve, reject) => {
 		target = target || 'development';
 		const segments = [...(target === 'docs' ? [target] : ['dist', target, 'server']), 'main.js'];
@@ -22,7 +23,9 @@ function run(target) {
 			// run(target);
 			const main = require(mainPath);
 			// console.log(main);
-			render(main.default, BASE_URL).then(result => {
+			const url = options.url || DEFAULT_URL;
+			const slug = options.slug || DEFAULT_SLUG;
+			render(main.default, url, slug).then(result => {
 				(async () => {
 					await open(result);
 					resolve(result);
@@ -73,7 +76,7 @@ function parse(result) {
 	console.log(Object.keys(result));
 }
 
-function render(callback, baseUrl) {
+function render(callback, url, slug) {
 	return new Promise((resolve, reject) => {
 		try {
 			const params = [];
@@ -86,13 +89,19 @@ function render(callback, baseUrl) {
 			// console.log(slug);
 			params[3] = slug;
 			*/
+			console.log(chalk.gray('app log start'));
 			callback((error, result) => {
 				if (error) {
 					reject(error);
 				} else {
+					console.log(chalk.gray('app log complete'));
+					console.log(chalk.green('url'), chalk.cyan(url + slug));
+					console.log(chalk.green('globals'), chalk.cyan(result.globals));
+					console.log(chalk.green('statusCode'), chalk.cyan(result.statusCode));
+					console.log(chalk.green('redirectUrl'), chalk.cyan(result.redirectUrl));
 					resolve(result);
 				}
-			}, '/', {}, baseUrl, '/', {
+			}, '/', {}, url, slug, {
 				originalHtml: `<!doctype html>
 			<html lang="en">
 
